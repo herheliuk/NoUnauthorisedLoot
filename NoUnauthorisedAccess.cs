@@ -7,6 +7,7 @@ namespace Oxide.Plugins;
 public class NoUnauthorisedAccess : RustPlugin
 {
     private object IsAuthorised(BasePlayer player, BaseEntity entity) =>
+        // Allow if
         (
             // World
             entity.OwnerID == 0 ||
@@ -24,6 +25,7 @@ public class NoUnauthorisedAccess : RustPlugin
             ? null : false;
 
     private object OnCupboardAuthorize(BuildingPrivlidge cupboard, BasePlayer player) =>
+        // Allow if
         (
             // Nobody’s
             cupboard.authorizedPlayers.Count == 0 ||
