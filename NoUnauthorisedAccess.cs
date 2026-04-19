@@ -1,8 +1,9 @@
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Oxide.Plugins;
 
-[Info("No Unauthorised Access", "&anhe", "1.2.2")]
+[Info("No Unauthorised Access", "&anhe", "1.2.4")]
 [Description("Prevents players from accessing other players’ belongings.")]
 public class NoUnauthorisedAccess : RustPlugin
 {
@@ -19,6 +20,21 @@ public class NoUnauthorisedAccess : RustPlugin
             // Authorised
             entity.GetBuildingPrivilege()
                 ?.IsAuthed(player) == true ||
+            // Admin
+            player.IsAdmin
+        )
+            ? null : false;
+
+    private object IsAuthorised(BasePlayer player, ulong ownerId) =>
+        // Allow if
+        (
+            // World
+            ownerId == 0 ||
+            // Yours
+            ownerId == player.userID ||
+            // Team’s
+            RelationshipManager.ServerInstance.FindTeam(player.currentTeam)
+                ?.members.Contains(ownerId) == true ||
             // Admin
             player.IsAdmin
         )
@@ -42,6 +58,38 @@ public class NoUnauthorisedAccess : RustPlugin
     private object CanLootEntity(BasePlayer player, BaseEntity entity) =>
         IsAuthorised(player, entity);
     
+    #region Backpacks
+
+    private Dictionary<ItemId, ulong> dropOwners = new Dictionary<ItemId, ulong>();
+
+    private bool IsBackpack(Item item) =>
+        item?.info?.shortname.Contains("backpack") == true;
+
+    private void OnItemDropped(Item item, BaseEntity entity)
+    {
+        if (
+            IsBackpack(item) &&
+            item.GetOwnerPlayer() is {} owner
+        )
+            dropOwners[item.uid] = owner.userID;
+    }
+
+    private object OnItemPickup(Item item, BasePlayer player)
+    {
+        ulong ownerId;
+        if (
+            IsBackpack(item) &&
+            dropOwners.TryGetValue(item.uid, out ownerId)
+        ) {
+            dropOwners.Remove(item.uid);
+            return IsAuthorised(player, ownerId);
+        }
+        
+        return null;
+    }
+
+    #endregion
+
     #region Plants
 
     private object OnRemoveDying(GrowableEntity plant, BasePlayer player) =>
@@ -49,7 +97,10 @@ public class NoUnauthorisedAccess : RustPlugin
 
     private object OnGrowableGather(GrowableEntity plant, BasePlayer player) =>
         IsAuthorised(player, plant);
-    
+
+    private object CanTakeCutting(BasePlayer player, GrowableEntity plant) =>
+        IsAuthorised(player, plant);
+
     #endregion
 
     #region Electricity
