@@ -3,10 +3,12 @@ using System.Collections.Generic;
 
 namespace Oxide.Plugins;
 
-[Info("No Unauthorised Access", "&anhe", "1.2.4")]
+[Info("No Unauthorised Access", "&anhe", "1.2.5")]
 [Description("Prevents players from accessing other players’ belongings.")]
 public class NoUnauthorisedAccess : RustPlugin
 {
+    #region Authorisation Check
+
     private object IsAuthorised(BasePlayer player, BaseEntity entity) =>
         // Allow if
         (
@@ -40,6 +42,25 @@ public class NoUnauthorisedAccess : RustPlugin
         )
             ? null : false;
 
+    #endregion
+
+    #region Generic Entities
+
+    private object CanLootEntity(BasePlayer player, BaseEntity entity) =>
+        entity.ShortPrefabName.Contains("mailbox.deployed")
+            ? null : IsAuthorised(player, entity);
+    
+    private bool CanPickupEntity(BasePlayer player, BaseEntity entity) =>
+        IsAuthorised(player, entity) == null
+            ? true : false;
+
+    private object OnOvenToggle(BaseOven oven, BasePlayer player) =>
+        IsAuthorised(player, oven);
+
+    #endregion
+
+    #region Cupboard
+
     private object OnCupboardAuthorize(BuildingPrivlidge cupboard, BasePlayer player) =>
         // Allow if
         (
@@ -54,9 +75,8 @@ public class NoUnauthorisedAccess : RustPlugin
             player.IsAdmin
         )
             ? null : false;
-
-    private object CanLootEntity(BasePlayer player, BaseEntity entity) =>
-        IsAuthorised(player, entity);
+    
+    #endregion
     
     #region Backpacks
 
@@ -127,6 +147,36 @@ public class NoUnauthorisedAccess : RustPlugin
             IsAuthorised(player, ioB) == null
         )
             ? null : false;
+
+    #endregion
+
+    #region Racked Weapons
+
+    private object OnRackedWeaponSwap(Item local0, WeaponRackSlot local2, BasePlayer player, WeaponRack weaponRack) =>
+        IsAuthorised(player, weaponRack);
+
+    private object OnRackedWeaponTake(Item local1, BasePlayer player, WeaponRack weaponRack) =>
+        IsAuthorised(player, weaponRack);
+
+    private object OnRackedWeaponLoad(Item local4, ItemDefinition local7, BasePlayer player, WeaponRack weaponRack) =>
+        IsAuthorised(player, weaponRack);
+
+    private object OnRackedWeaponUnload(Item local1, BasePlayer player, WeaponRack weaponRack) =>
+        IsAuthorised(player, weaponRack);
+
+    private object OnRackedWeaponMount(Item item, BasePlayer player, WeaponRack weaponRack) =>
+        IsAuthorised(player, weaponRack);
+
+    // Carbon Hooks
+
+    private object CanPlaceOnRack(WeaponRack rack, BasePlayer player, Item item, int gridCellIndex, int rotation) =>
+        IsAuthorised(player, rack);
+
+    private object CanPickupFromRack(WeaponRack rack, BasePlayer player, Item item, int mountSlotIndex, int playerBeltIndex, bool tryHold) =>
+        IsAuthorised(player, rack);
+
+    private object CanPickupAllFromRack(WeaponRack rack, BasePlayer player, int mountSlotIndex) =>
+        IsAuthorised(player, rack);
 
     #endregion
 }
